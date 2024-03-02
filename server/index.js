@@ -8,8 +8,10 @@ const bcrypt = require('bcrypt')
 require('dotenv').config()
 
 // const uri = "mongodb+srv://Clayton:Andrew101.@Cluster0.t8muxqv.mongodb.net/?retryWrites=true&w=majority"
-const uri = "mongodb+srv://Clayton:Andrew101.@cluster0.t8muxqv.mongodb.net/?retryWrites=true&w=majority";
+//const uri = "mongodb+srv://Clayton:Andrew101.@Cluster0.t8muxqv.mongodb.net/?retryWrites=true&w=majority";
 
+const uri ='mongodb+srv://Clayton:Andrew101.@cluster0.elkxkl1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'
+//hint: e5Wan1jzjClShciO 
 const app = express()
 app.use(cors())
 app.use(express.json())
