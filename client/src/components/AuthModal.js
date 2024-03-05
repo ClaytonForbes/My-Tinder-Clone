@@ -9,7 +9,7 @@ const AuthModal = ({ setShowModal,  isSignUp }) => {
     const [password, setPassword] = useState(null)
     const [confirmPassword, setConfirmPassword] = useState(null)
     const [error, setError] = useState(null)
-    const [ cookies, setCookie, removeCookie] = useCookies(null)
+    const [ cookies, setCookie, removeCookie] = useCookies(['user'])
 
     let navigate = useNavigate()
 
@@ -29,14 +29,16 @@ const AuthModal = ({ setShowModal,  isSignUp }) => {
                 return
             }
 
-            const response = await axios.post(`http://localhost:8000/${isSignUp ? 'signup' : 'login'}`, { email, password })
+            const response = await axios.post(`http://localhost:8000/${isSignUp ? 'signup' : 'login'}`, { email, password })//passing email and password to backend 
+            // also for when the url is chaneg we put a ternary expression in the link for when it changes 
 
+            setCookie("Email", response.data.email)
             setCookie('AuthToken', response.data.token)
             setCookie('UserId', response.data.userId)
 
-            const success = response.status === 201
-            if (success && isSignUp) navigate ('/onboarding')
-            if (success && !isSignUp) navigate ('/dashboard')
+            const success = response.status === 201 // if we get a 200 
+            if (success && isSignUp) navigate ('/onboarding')//go to signup page 
+            if (success && !isSignUp) navigate ('/dashboard')// if not go to dashboard 
 
             window.location.reload()
 

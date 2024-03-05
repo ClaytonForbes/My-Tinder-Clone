@@ -5,12 +5,11 @@ const {v4: uuidv4} = require('uuid')
 const jwt = require('jsonwebtoken')
 const cors = require('cors')
 const bcrypt = require('bcrypt')
-require('dotenv').config()
+const {v1:uuidv1} =require('uuid')
+const env = require('dotenv').config()
 
-// const uri = "mongodb+srv://Clayton:Andrew101.@Cluster0.t8muxqv.mongodb.net/?retryWrites=true&w=majority"
-//const uri = "mongodb+srv://Clayton:Andrew101.@Cluster0.t8muxqv.mongodb.net/?retryWrites=true&w=majority";
 
-const uri ='mongodb+srv://Clayton:Andrew101.@cluster0.elkxkl1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'
+const uri = process.env.DBURL
 //hint: e5Wan1jzjClShciO 
 const app = express()
 app.use(cors())
@@ -21,7 +20,67 @@ app.get('/', (req, res) => {
     res.json('Server is running')
 })
 
-app.get('/test', async (req, res) =>{
+app.post('/signup', async (req,res)=>{
+    const client = new MongoClient(uri)
+    const {email, password} = req.body // getting the email and password 
+    const generateUserId = uuidv1()
+    const hashedPassword = await bcrypt.hash(password, 10)
+
+    try{
+        await client.connect()
+        const database = client.db('app-data')
+        const users = database.collection('users')
+
+        const existingUser = await users.findOne({email})
+        if(existingUser){
+            return res.status(409).send('User already exists. Please Login')
+        }
+        const sanitizedEmail = email.toLowerCase()
+        const data ={
+            user_id: generateUserId,
+            email: sanitizedEmail,
+            hashed_password:hashedPassword
+        }
+        const insertedUser = await users.insertOne(data)
+        const token = jwt.sign(insertedUser, sanitizedEmail, {
+            expiresIn: 60 * 24,
+        })
+        res.status(201).json({token, userId:generateUserId, email:sanitizedEmail})
+
+    }catch (error){
+        console.log(error)
+    }
+}) 
+
+
+
+app.post('/login',async (req,res)=>{
+const client = new MongoClient(uri)
+const {email, password} = req.body
+
+try{
+    await client.connect()
+    const database = client.db('app-data')
+    const users = database.collection('users')
+     const user = await users.findOne({email})
+
+     const correctPassword =  await bcrypt.compare(password, user.hashed_password)
+
+     if (user && correctPassword ) {
+        const token = jwt.sign(user,email, {
+            expiresIn: 60 * 24
+        })
+        res.status(201).json({token, userId: user.user_id, email})
+     }
+     res.status(400).send('Invalid Credentials')
+    
+}catch(error){
+    console.log(error)
+}
+
+})
+
+app.get('/users', async (req, res) =>{
     const client = new MongoClient(uri)
     try{
         await client.connect()
