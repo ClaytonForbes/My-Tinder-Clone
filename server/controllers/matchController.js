@@ -1,8 +1,8 @@
 const { getDB } = require("../config/db");
 
 // POST /api/matches
-// Body: { userId, matchedUserId }
-// Called after a right-swipe to check/create a mutual match
+// Dashboard sends: { userId, matchedUserId }
+// Checks if the other person swiped right on us too → creates match if so
 const createOrCheckMatch = async (req, res) => {
   try {
     const db = getDB();
@@ -16,6 +16,7 @@ const createOrCheckMatch = async (req, res) => {
     }
 
     // Check if the other person already swiped right on us
+    // Stored with direction "right" (not "like" — that was the old bug)
     const reverseSwipe = await swipes.findOne({
       fromUserId: matchedUserId,
       toUserId: userId,
@@ -23,10 +24,12 @@ const createOrCheckMatch = async (req, res) => {
     });
 
     if (!reverseSwipe) {
+      // No mutual like yet — not a match
       return res.json({ isMatch: false });
     }
 
-    // It's a match — add each user to the other's matches array
+    // It's a match! Add each user to the other's matches array.
+    // $addToSet prevents duplicates if called twice.
     await users.updateOne(
       { user_id: userId },
       { $addToSet: { matches: { user_id: matchedUserId } } }
