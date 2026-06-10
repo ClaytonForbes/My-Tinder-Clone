@@ -3,49 +3,96 @@ import { useEffect, useState } from "react";
 import { useCookies } from "react-cookie";
 
 const MatchesDisplay = ({ matches, setClickedUser }) => {
-  const [matchedProfiles, setMatchedProfiles] = useState(null);
-  const [cookies, setCookie, removeCookie] = useCookies(null);
+    const [matchedProfiles, setMatchedProfiles] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-  const matchedUserIds = matches.map(({ user_id }) => user_id);
-  const userId = cookies.UserId;
+    const [cookies] = useCookies(null);
+    const userId = cookies.UserId;
 
-  const getMatches = async () => {
-    try {
-      const response = await axios.get("http://localhost:8000/users", {
-        params: { userIds: JSON.stringify(matchedUserIds) },
-      });
-      setMatchedProfiles(response.data);
-    } catch (error) {
-      console.log(error);
+    const matchedUserIds = matches?.map(({ user_id }) => user_id) || [];
+
+    const getMatches = async () => {
+        try {
+            setLoading(true);
+
+            const response = await axios.get(
+                "http://localhost:8000/api/users",   // ✅ fixed: was /users (missing /api)
+                {
+                    params: {
+                        userIds: JSON.stringify(matchedUserIds),
+                    },
+                }
+            );
+
+            setMatchedProfiles(response.data);
+        } catch (error) {
+            console.log(error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (matchedUserIds.length > 0) {
+            getMatches();
+        } else {
+            setLoading(false);
+        }
+    }, [matches]);
+
+    // Only show mutual matches (the other person also has us in their matches)
+    const filteredMatchedProfiles =
+        matchedProfiles?.filter(
+            (matchedProfile) =>
+                matchedProfile.matches?.some(
+                    (profile) => profile.user_id === userId
+                )
+        ) || [];
+
+    if (loading) {
+        return (
+            <div className="matches-display">
+                <p>Loading matches...</p>
+            </div>
+        );
     }
-  };
 
-  useEffect(() => {
-    getMatches();
-  }, [matches]);
+    if (filteredMatchedProfiles.length === 0) {
+        return (
+            <div className="matches-display">
+                <div className="empty-state">
+                    <div className="empty-icon">💘</div>
+                    <h3>No matches yet</h3>
+                    <p>Start swiping to find people.</p>
+                </div>
+            </div>
+        );
+    }
 
-  const filteredMatchedProfiles = matchedProfiles?.filter(
-    (matchedProfile) =>
-      matchedProfile.matches.filter((profile) => profile.user_id == userId)
-        .length > 0
-  );
+    return (
+        <div className="matches-display">
+            {filteredMatchedProfiles.map((match) => (
+                <div
+                    key={match.user_id}
+                    className="match-card"
+                    onClick={() => setClickedUser(match)}
+                >
+                    <div className="match-avatar">
+                        <img
+                            src={match.url}
+                            alt={match.first_name}
+                        />
+                        <div className="online-indicator"></div>
+                    </div>
 
-  return (
-    <div className="matches-display">
-      {filteredMatchedProfiles?.map((match, _index) => (
-        <div
-          key={_index}
-          className="match-card"
-          onClick={() => setClickedUser(match)}
-        >
-          <div className="img-container">
-            <img src={match?.url} alt={match?.first_name + " profile"} />
-          </div>
-          <h3>{match?.first_name}</h3>
+                    <div className="match-info">
+                        <h3>{match.first_name}</h3>
+                        <p>Tap to start chatting</p>
+                    </div>
+                </div>
+            ))}
         </div>
-      ))}
-    </div>
-  );
+    );
 };
 
 export default MatchesDisplay;
